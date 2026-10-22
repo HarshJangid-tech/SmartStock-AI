@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SmartStock AI | Inventory Dashboard</title>
+<style>
+:root{--bg:#f4f7fb;--card:#fff;--ink:#172033;--muted:#68748a;--line:#e6ebf2;--blue:#315efb;--green:#11865b;--amber:#b7791f;--red:#c24141}
+*{box-sizing:border-box}body{margin:0;font-family:Inter,Segoe UI,Arial,sans-serif;background:var(--bg);color:var(--ink)}
+header{background:linear-gradient(120deg,#15254a,#315efb);color:#fff;padding:28px max(22px,calc((100% - 1120px)/2))}
+.brand{display:flex;align-items:center;gap:12px}.logo{width:44px;height:44px;border-radius:13px;background:#ffffff24;display:grid;place-items:center;font-size:24px}
+h1{font-size:25px;margin:0}.tagline{margin:6px 0 0;color:#dce5ff;font-size:14px}
+main{max-width:1120px;margin:24px auto;padding:0 18px 35px}
+.topline{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:18px}
+h2{font-size:19px;margin:0}.muted{color:var(--muted);font-size:13px;margin-top:5px}
+button{border:0;border-radius:10px;padding:11px 15px;font-weight:650;cursor:pointer;background:var(--blue);color:#fff}button.secondary{background:#edf1ff;color:#2949c7}button.danger{background:#fff0f0;color:#b42323;padding:7px 10px}button.small{padding:7px 10px}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:18px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px;box-shadow:0 5px 18px #1b2c4a08}
+.stat-label{font-size:13px;color:var(--muted)}.stat-num{font-size:29px;font-weight:750;margin-top:8px}.stat-icon{float:right;font-size:22px}
+.toolbar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px}.toolbar input,.toolbar select{flex:1;min-width:180px}
+input,select{font:inherit;border:1px solid #d8e0ec;background:#fff;border-radius:10px;padding:11px 12px;color:var(--ink);width:100%}
+.table-wrap{overflow-x:auto}table{width:100%;border-collapse:collapse;min-width:680px}th,td{text-align:left;padding:14px 12px;border-bottom:1px solid var(--line);font-size:14px}th{color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.05em}tr:last-child td{border-bottom:0}
+.product-name{font-weight:700}.sku{font-size:12px;color:var(--muted);margin-top:4px}.pill{display:inline-block;padding:5px 9px;border-radius:99px;font-size:12px;font-weight:700}.ok{background:#e7f8ef;color:#087443}.low{background:#fff4d9;color:#975a06}.out{background:#ffe8e8;color:#b42323}
+.actions{display:flex;gap:6px}.empty{text-align:center;color:var(--muted);padding:28px}
+.note{margin-top:14px;color:var(--muted);font-size:12px;line-height:1.5}
+.modal-backdrop{display:none;position:fixed;inset:0;background:#101a2d88;align-items:center;justify-content:center;padding:18px;z-index:5}.modal{background:#fff;border-radius:18px;padding:22px;width:min(480px,100%);box-shadow:0 20px 70px #0003}.modal h3{margin:0 0 18px}.fields{display:grid;grid-template-columns:1fr 1fr;gap:12px}.field{display:flex;flex-direction:column;gap:6px;font-size:13px;color:var(--muted)}.field.full{grid-column:1/-1}.modal-actions{display:flex;justify-content:flex-end;gap:9px;margin-top:18px}
+.toast{position:fixed;right:20px;bottom:20px;background:#172033;color:#fff;padding:12px 16px;border-radius:12px;display:none;z-index:10}
+@media(max-width:760px){.stats{grid-template-columns:repeat(2,1fr)}header{padding:22px 18px}.stat-num{font-size:25px}}
+@media(max-width:420px){.stats{grid-template-columns:1fr 1fr}.fields{grid-template-columns:1fr}.field.full{grid-column:auto}}
+</style>
+</head>
+<body>
+<header><div class="brand"><div class="logo">📦</div><div><h1>SmartStock AI</h1><p class="tagline">Smart inventory manager for small shops</p></div></div></header>
+<main>
+  <div class="topline"><div><h2>Inventory Dashboard</h2><div class="muted">Track products, stock levels, and low-stock alerts.</div></div><button onclick="openModal()">＋ Add Product</button></div>
+  <section class="stats">
+    <div class="card"><span class="stat-icon">🧾</span><div class="stat-label">Product Types</div><div class="stat-num" id="productTypes">0</div></div>
+    <div class="card"><span class="stat-icon">📦</span><div class="stat-label">Total Units</div><div class="stat-num" id="totalUnits">0</div></div>
+    <div class="card"><span class="stat-icon">⚠️</span><div class="stat-label">Low Stock Items</div><div class="stat-num" id="lowCount">0</div></div>
+    <div class="card"><span class="stat-icon">💰</span><div class="stat-label">Inventory Value</div><div class="stat-num" id="inventoryValue">₹0</div></div>
+  </section>
+  <section class="card">
+    <div class="toolbar"><input id="search" placeholder="Search product or category…" oninput="render()"><select id="filter" onchange="render()"><option value="all">All stock levels</option><option value="low">Low stock</option><option value="out">Out of stock</option><option value="ok">In stock</option></select><button class="secondary" onclick="resetDemo()">Reset demo data</button></div>
+    <div class="table-wrap"><table><thead><tr><th>Product</th><th>Category</th><th>Quantity</th><th>Price / unit</th><th>Stock status</th><th>Actions</th></tr></thead><tbody id="rows"></tbody></table><div class="empty" id="empty" hidden>No products match your search.</div></div>
+  </section>
+  <p class="note">Demo version: inventory is saved in this browser on this device using local storage. Use “Export JSON” to keep a backup. This browser demo is separate from the Java console version.</p>
+  <div class="toolbar" style="margin-top:12px"><button class="secondary" onclick="exportData()">Export JSON</button><label class="secondary" style="display:inline-flex;align-items:center;border-radius:10px;padding:0 14px;cursor:pointer;font-weight:650;font-size:14px">Import JSON <input type="file" accept=".json,application/json" style="display:none" onchange="importData(event)"></label></div>
+</main>
+<div class="modal-backdrop" id="backdrop" onclick="if(event.target===this)closeModal()"><div class="modal"><h3 id="modalTitle">Add Product</h3><form id="productForm" onsubmit="saveProduct(event)"><input id="editId" type="hidden"><div class="fields">
+<label class="field full">Product name<input id="name" required maxlength="70" placeholder="e.g. Notebook"></label>
+<label class="field">Category<input id="category" required maxlength="40" placeholder="Stationery"></label>
+<label class="field">Quantity<input id="qty" type="number" min="0" step="1" required value="10"></label>
+<label class="field">Price per unit (₹)<input id="price" type="number" min="0" step="0.01" required value="25"></label>
+<label class="field">Low-stock threshold<input id="threshold" type="number" min="0" step="1" required value="5"></label>
+</div><div class="modal-actions"><button type="button" class="secondary" onclick="closeModal()">Cancel</button><button type="submit">Save Product</button></div></form></div></div>
+<div class="toast" id="toast"></div>
+<script>
+const starter=[
+{id:1,name:"Notebook",category:"Stationery",qty:12,price:45,threshold:5},
+{id:2,name:"Ball Pen",category:"Stationery",qty:18,price:10,threshold:8},
+{id:3,name:"USB Cable",category:"Electronics",qty:4,price:149,threshold:5}
+];
+let products=load();
+function load(){try{const x=JSON.parse(localStorage.getItem("smartstock_products"));return Array.isArray(x)?x:starter.map(p=>({...p}));}catch{return starter.map(p=>({...p}));}}
+function persist(){localStorage.setItem("smartstock_products",JSON.stringify(products));}
+function status(p){if(p.qty===0)return ["Out of stock","out"];if(p.qty<=p.threshold)return ["Low stock","low"];return ["In stock","ok"];}
+function money(n){return new Intl.NumberFormat("en-IN",{style:"currency",currency:"INR",maximumFractionDigits:2}).format(n);}
+function render(){
+ const q=document.getElementById("search").value.trim().toLowerCase(),f=document.getElementById("filter").value;
+ const filtered=products.filter(p=>(p.name+" "+p.category).toLowerCase().includes(q)&&(f==="all"||status(p)[1]===f));
+ document.getElementById("productTypes").textContent=products.length;
+ document.getElementById("totalUnits").textContent=products.reduce((s,p)=>s+Number(p.qty),0);
+ document.getElementById("lowCount").textContent=products.filter(p=>p.qty>0&&p.qty<=p.threshold).length;
+ document.getElementById("inventoryValue").textContent=money(products.reduce((s,p)=>s+p.qty*p.price,0));
+ document.getElementById("rows").innerHTML=filtered.map(p=>{let st=status(p);return `<tr><td><div class="product-name">${escapeHtml(p.name)}</div><div class="sku">ID: SS-${String(p.id).padStart(3,"0")}</div></td><td>${escapeHtml(p.category)}</td><td><b>${p.qty}</b></td><td>${money(p.price)}</td><td><span class="pill ${st[1]}">${st[0]}</span></td><td><div class="actions"><button class="secondary small" onclick="editProduct(${p.id})">Edit</button><button class="danger" onclick="deleteProduct(${p.id})">Delete</button></div></td></tr>`}).join("");
+ document.getElementById("empty").hidden=filtered.length>0;
+}
+function escapeHtml(s){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
+function openModal(p=null){document.getElementById("productForm").reset();document.getElementById("editId").value=p?p.id:"";document.getElementById("modalTitle").textContent=p?"Edit Product":"Add Product";document.getElementById("name").value=p?p.name:"";document.getElementById("category").value=p?p.category:"";document.getElementById("qty").value=p?p.qty:10;document.getElementById("price").value=p?p.price:25;document.getElementById("threshold").value=p?p.threshold:5;document.getElementById("backdrop").style.display="flex";document.getElementById("name").focus();}
+function closeModal(){document.getElementById("backdrop").style.display="none";}
+function saveProduct(e){e.preventDefault();const id=document.getElementById("editId").value;const p={id:id?Number(id):Date.now(),name:document.getElementById("name").value.trim(),category:document.getElementById("category").value.trim(),qty:Number(document.getElementById("qty").value),price:Number(document.getElementById("price").value),threshold:Number(document.getElementById("threshold").value)};if(id)products=products.map(x=>x.id===p.id?p:x);else products.push(p);persist();render();closeModal();toast(id?"Product updated":"Product added");}
+function editProduct(id){const p=products.find(x=>x.id===id);if(p)openModal(p);}
+function deleteProduct(id){const p=products.find(x=>x.id===id);if(p&&confirm(`Delete "${p.name}" from inventory?`)){products=products.filter(x=>x.id!==id);persist();render();toast("Product deleted");}}
+function resetDemo(){if(confirm("Reset inventory to the 3 demo products? Your current browser inventory will be replaced.")){products=starter.map(p=>({...p}));persist();render();toast("Demo data restored");}}
+function exportData(){const blob=new Blob([JSON.stringify(products,null,2)],{type:"application/json"}),url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download="smartstock_inventory_backup.json";a.click();URL.revokeObjectURL(url);toast("Inventory backup exported");}
+function importData(e){const file=e.target.files[0];if(!file)return;const reader=new FileReader();reader.onload=()=>{try{const data=JSON.parse(reader.result);if(!Array.isArray(data)||!data.every(p=>p.name&&p.category&&Number.isFinite(Number(p.qty))&&Number.isFinite(Number(p.price))))throw Error();products=data.map((p,i)=>({id:Number(p.id)||Date.now()+i,name:String(p.name),category:String(p.category),qty:Math.max(0,Number(p.qty)),price:Math.max(0,Number(p.price)),threshold:Math.max(0,Number(p.threshold)||5)}));persist();render();toast("Inventory imported");}catch{alert("That JSON file does not look like a SmartStock inventory backup.");}e.target.value="";};reader.readAsText(file);}
+function toast(msg){const el=document.getElementById("toast");el.textContent=msg;el.style.display="block";setTimeout(()=>el.style.display="none",2200);}
+render();
+</script>
+</body>
+</html>
